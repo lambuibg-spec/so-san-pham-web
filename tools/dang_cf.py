@@ -40,6 +40,8 @@ def trang_da_khoa(url):
         if e.code in (301, 302, 303, 307, 308):
             return 'cloudflareaccess.com' in loc, e.code
         return e.code in (401, 403), e.code
+    except urllib.error.URLError:         # project moi tao, chua dang lan nao: ten *.pages.dev chua phan giai duoc => chua co trang, coi la CHUA KHOA
+        return False, 0
 
 
 def project():
