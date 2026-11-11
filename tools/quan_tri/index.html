@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản lý nhân viên</title>
+<style>
+:root{--bg:#f6f3ef;--fg:#1a1a1a;--mut:#6b625b;--card:#fff;--line:#e4ddd5;--acc:#1a1a1a;--bad:#b3261e;--ok:#1b7a3a}
+@media (prefers-color-scheme:dark){:root{--bg:#141210;--fg:#f1ede8;--mut:#a39a91;--card:#1e1b18;--line:#34302b;--acc:#f1ede8;--bad:#ff8a80;--ok:#7fd99b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:28px 16px 64px}h1{font-size:28px;margin:0 0 4px}.mut{color:var(--mut);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);color:var(--fg);font:inherit}
+button{cursor:pointer;border:0;border-radius:10px;padding:10px 16px;font:600 15px system-ui,sans-serif;background:var(--acc);color:var(--bg)}
+button.x{background:transparent;color:var(--bad);border:1px solid var(--line);padding:6px 10px;font-size:13px}
+button:disabled{opacity:.5;cursor:default}ul{list-style:none;margin:8px 0 0;padding:0}
+li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line);word-break:break-all}li:first-child{border-top:0}
+.tag{font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+#tb{min-height:22px;margin-top:10px;font-size:14px}.l{color:var(--bad)}.o{color:var(--ok)}a{color:inherit}
+</style></head><body><main>
+<h1>Nhân viên được xem sổ</h1>
+<p class="mut">Chỉ quản trị viên thấy trang này. Nhân viên mở <b>so-san-pham.pages.dev</b>, nhập email, nhận <b>mã 6 số</b> về email là vào (dùng được mọi loại email).</p>
+<div class="card"><b>Thêm email</b><p class="mut" style="margin:4px 0 8px">Mỗi email một dòng (hoặc cách nhau dấu phẩy) — dán nhiều email một lần được.</p>
+<textarea id="them" placeholder="nhanvien1@gmail.com&#10;nhanvien2@gmail.com"></textarea>
+<div style="margin-top:10px"><button id="bt">Thêm vào danh sách</button></div><div id="tb"></div></div>
+<div class="card"><b>Đang được xem sổ <span id="dem" class="mut"></span></b><ul id="ds"><li class="mut">Đang tải…</li></ul></div>
+<p class="mut"><a href="/">← Về sổ sản phẩm</a></p>
+<script>
+var $=function(i){return document.getElementById(i)},ADM=[];
+function tb(m,l){var e=$('tb');e.textContent=m;e.className=l?'l':'o'}
+function ve(j){ADM=j.admin_list||ADM;var ul=$('ds');ul.innerHTML='';$('dem').textContent='('+j.emails.length+'/'+(j.toi_da||50)+')';
+ j.emails.forEach(function(e){var li=document.createElement('li'),s=document.createElement('span');s.textContent=e;
+  if(ADM.indexOf(e)>=0){var t=document.createElement('span');t.className='tag';t.textContent='quản trị';s.appendChild(t);li.appendChild(s)}
+  else{li.appendChild(s);var b=document.createElement('button');b.className='x';b.textContent='Xoá';b.onclick=function(){if(confirm('Bỏ '+e+' khỏi danh sách? Người này sẽ không vào được sổ nữa.'))gui({bo:e})};li.appendChild(b)}
+  ul.appendChild(li)})}
+function tai(){fetch('/quan-tri/api',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+ if(!j.admin){document.querySelector('main').innerHTML='<h1>Không có quyền</h1><p class="mut">Chỉ quản trị viên mới mở được trang này.</p><p><a href="/">← Về sổ</a></p>';return}
+ if(j.loi){$('ds').innerHTML='';tb(j.loi,1);return}ve(j)}).catch(function(e){tb('Lỗi tải: '+e,1)})}
+function gui(b){$('bt').disabled=true;tb('Đang lưu…');
+ fetch('/quan-tri/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(j){
+  $('bt').disabled=false;if(j.loi){tb(j.loi,1);return}tb('Đã lưu. Có hiệu lực ngay.');$('them').value='';ve({emails:j.emails})}).catch(function(e){$('bt').disabled=false;tb('Lỗi: '+e,1)})}
+$('bt').onclick=function(){var l=$('them').value.split(/[\s,;]+/).filter(Boolean);if(!l.length){tb('Chưa nhập email',1);return}gui({them:l})};
+tai();
+</script></main></body></html>
