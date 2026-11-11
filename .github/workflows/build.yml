@@ -4,8 +4,8 @@ name: dung-web-tu-git
 # Kho nay CONG KHAI (de Actions mien phi): du lieu so nam o kho rieng tu, log khong in ma san pham.
 # CUA CHAN: trang Cloudflare chua khoa (Access tat / chua bat) => chi dang trang "dang khoa", KHONG dang du lieu that, workflow DO.
 on:
-  # schedule:   # TAM TAT cho toi khi bat Cloudflare Access (bat lai: bo dau #)
-  #   - cron: '*/10 * * * *'
+  schedule:
+    - cron: '*/10 * * * *'
   workflow_dispatch:
     inputs:
       ep:
