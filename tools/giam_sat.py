@@ -13,7 +13,7 @@ import datetime as dt, json, os, re, subprocess, sys, time, urllib.request
 
 FB = 'https://project-c3d8a9ea-5303-4e42-969-default-rtdb.asia-southeast1.firebasedatabase.app'
 LAW = os.environ['TIKTOK_LUAT']
-REPO = os.environ.get('REPO', 'lambuibg-spec/so-san-pham')
+REPO = os.environ.get('REPO', 'lambuibg-spec/so-san-pham-web')
 CHO_PHEP_GIT = 20 * 60
 CHO_PHEP_DUNG = 90 * 60      # lich cua GitHub thuc te 27-38 phut / lan (khong phai 10) ⇒ cho phep 90 phut moi bao; PC kich dung ngay khi git doi nen binh thuong nhanh hon nhieu
 loi, ghi = [], []
