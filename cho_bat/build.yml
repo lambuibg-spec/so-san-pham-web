@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ vars.KHO_MAU || 'lambuibg-spec/so-san-pham-kho' }}
-          token: ${{ secrets.KHO_TOKEN }}
+          token: ${{ secrets.KHO_GHI_TOKEN || secrets.KHO_TOKEN }}   # khoa rieng: doc + GHI chi kho mau (khoa kia chi doc kho luat / code)
           path: kho
           fetch-depth: 1
       - name: kho luat (chi doc)
