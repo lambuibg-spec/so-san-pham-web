@@ -1,0 +1,60 @@
+name: giam-sat-dong-bo
+# 10 phut / lan (lich GitHub thuc te 27-38 phut): so Firebase (tim + da quay) voi git, lan dung web gan nhat,
+# trang so CON KHOA GMAIL khong (04/11/2026), va PHIEU QUAY tren so co dung luat Google Sheet khong.
+# LECH => workflow DO => GitHub gui email cho chu kho. Kho CONG KHAI: log chi in so dem.
+on:
+  schedule:
+    - cron: '3,13,23,33,43,53 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  kiem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONIOENCODING: utf-8
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: kho luat (chi doc, day du lich su)
+        uses: actions/checkout@v4
+        with:
+          repository: lambuibg-spec/tiktok-tool-luat
+          token: ${{ secrets.KHO_TOKEN }}
+          path: law
+          fetch-depth: 0
+      - name: kho code (chi doc)
+        uses: actions/checkout@v4
+        with:
+          repository: lambuibg-spec/tiktok-tool-code
+          token: ${{ secrets.KHO_TOKEN }}
+          path: code
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: trang so con khoa gmail khong?
+        run: python tools/dang_cf.py kiem_khoa
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PROJECT: ${{ vars.CF_PROJECT || 'so-san-pham' }}
+      - name: dong bo Firebase - git - lan dung web
+        if: ${{ always() }}
+        run: python tools/giam_sat.py
+        env:
+          TIKTOK_LUAT: ${{ github.workspace }}/law
+          REPO: ${{ github.repository }}
+      - name: phieu tren so dung luat Google Sheet? (R2 canh, R4 lap, R5 ghi chu dung) - chi in ket qua
+        if: ${{ always() }}
+        run: |
+          set +e
+          python law/so-san-pham/kiem_phieu_theo_sheet.py > /tmp/phieu.txt 2>&1
+          rc=$?
+          grep -E '^(Phieu dang dung|KET QUA)' /tmp/phieu.txt
+          exit $rc
+        env:
+          TIKTOK_LUAT: ${{ github.workspace }}/law
+          CODE_REPO: ${{ github.workspace }}/code

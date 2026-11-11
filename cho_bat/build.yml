@@ -1,0 +1,108 @@
+name: dung-web-tu-git
+# GitHub la NOI DUY NHAT dung trang so san pham (20/10/2026). May / phien Claude KHONG day trang len.
+# 04/11/2026: trang dang len CLOUDFLARE PAGES co KHOA GMAIL (Cloudflare Access), khong con len GitHub Pages.
+# Kho nay CONG KHAI (de Actions mien phi): du lieu so nam o kho rieng tu, log khong in ma san pham.
+# CUA CHAN: trang Cloudflare chua khoa (Access tat / chua bat) => chi dang trang "dang khoa", KHONG dang du lieu that, workflow DO.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      ep:
+        description: 'Ep dang ngay ca khi trang khong doi (1 = co)'
+        required: false
+        default: '0'
+  push:
+    branches: [main]
+    paths: ['tools/**', '.github/workflows/build.yml']
+concurrency:
+  group: dung-web
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: Asia/Ho_Chi_Minh
+      PYTHONIOENCODING: utf-8
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_PROJECT: ${{ vars.CF_PROJECT || 'so-san-pham' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cloudflare - trang da khoa gmail chua?
+        id: cf
+        run: python tools/dang_cf.py chuan_bi
+      - name: CHUA KHOA - chi dang trang "dang khoa"
+        if: ${{ steps.cf.outputs.khoa != '1' && steps.cf.outputs.da_dang != 'cho-khoa' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy tools/cho_khoa --project-name=${{ env.CF_PROJECT }} --branch=main --commit-message=cho-khoa --commit-dirty=true
+      - name: CHUA KHOA - dung lai
+        if: ${{ steps.cf.outputs.khoa != '1' }}
+        run: |
+          echo "::error::Trang ${{ steps.cf.outputs.url }} CHUA bat khoa gmail (Cloudflare Access). Khong dang du lieu that. Bat Access roi chay lai."
+          exit 1
+      - name: kho mau trang (rieng tu, doc + ghi)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.KHO_MAU || 'lambuibg-spec/so-san-pham-kho' }}
+          token: ${{ secrets.KHO_TOKEN }}
+          path: kho
+          fetch-depth: 1
+      - name: kho luat (chi doc)
+        uses: actions/checkout@v4
+        with:
+          repository: lambuibg-spec/tiktok-tool-luat
+          token: ${{ secrets.KHO_TOKEN }}
+          path: law
+          fetch-depth: 1
+      - name: kho code (chi doc)
+        uses: actions/checkout@v4
+        with:
+          repository: lambuibg-spec/tiktok-tool-code
+          token: ${{ secrets.KHO_TOKEN }}
+          path: code
+          fetch-depth: 1
+      - run: pip install pillow requests
+      - name: dung trang tu git
+        env:
+          TIKTOK_LUAT: ${{ github.workspace }}/law
+          CODE_DIR: ${{ github.workspace }}/code/DỮ LIỆU DÙNG CHUNG CHO HỆ THỐNG/02_MODULE_DUNG_CHUNG
+          TPL_GZ: ${{ github.workspace }}/kho/template/so_ma_san_pham.html.gz
+        run: python tools/build_web.py
+      - name: tach anh + khoi the quay ra file (Cloudflare chi nhan file <= 25 MiB)
+        run: python tools/tach_file.py site site_cf
+      - name: trang doi so voi ban dang chay?
+        id: so
+        env:
+          EP: ${{ github.event.inputs.ep }}
+          DA_DANG: ${{ steps.cf.outputs.da_dang }}
+        run: |
+          sha=$(cat _work/BUILD_SHA)
+          echo "ban moi: build:$sha | ban dang chay: ${DA_DANG:-khong co}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [ "$DA_DANG" = "build:$sha" ] && [ "$EP" != "1" ]; then echo "doi=0" >> "$GITHUB_OUTPUT"; echo "Trang KHONG doi - bo qua dang"; else echo "doi=1" >> "$GITHUB_OUTPUT"; fi
+      - name: dang len Cloudflare Pages (sau khoa gmail)
+        if: ${{ steps.so.outputs.doi == '1' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site_cf --project-name=${{ env.CF_PROJECT }} --branch=main --commit-message=build:${{ steps.so.outputs.sha }} --commit-dirty=true
+      - name: luu mau trang moi vao kho rieng tu
+        if: ${{ hashFiles('_work/TEMPLATE_DOI') != '' }}
+        working-directory: kho
+        run: |
+          git config user.name "SO SAN PHAM (GitHub)"
+          git config user.email "so-san-pham@users.noreply.github.com"
+          git add template/so_ma_san_pham.html.gz
+          git commit -q -m "mau trang: them the san pham moi (tu dong)"
+          for i in 1 2 3; do git pull -q --rebase origin HEAD && git push -q origin HEAD && break || sleep 3; done
