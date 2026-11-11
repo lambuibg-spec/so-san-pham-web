@@ -3,8 +3,8 @@ name: giam-sat-dong-bo
 # trang so CON KHOA GMAIL khong (04/11/2026), va PHIEU QUAY tren so co dung luat Google Sheet khong.
 # LECH => workflow DO => GitHub gui email cho chu kho. Kho CONG KHAI: log chi in so dem.
 on:
-  schedule:
-    - cron: '3,13,23,33,43,53 * * * *'
+  # schedule:   # TAM TAT cho toi khi bat Cloudflare Access (bat lai: bo dau #)
+  #   - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
