@@ -1,0 +1,5 @@
+# Chính sách quyền riêng tư / Privacy policy — Sổ sản phẩm
+
+**Tiếng Việt.** "Sổ sản phẩm" là công cụ nội bộ, chỉ dành cho nhân viên được chủ dự án thêm vào danh sách. Khi bạn chọn "Đăng nhập bằng Google", Google chỉ cung cấp **địa chỉ email** của bạn để Cloudflare Access đối chiếu với danh sách được phép. Chúng tôi không đọc thư, danh bạ, tệp hay bất kỳ dữ liệu Google nào khác, không bán và không chia sẻ email cho bên thứ ba. Email chỉ được lưu trong danh sách cho phép và nhật ký đăng nhập của Cloudflare Access. Muốn xoá email khỏi danh sách, liên hệ chủ dự án: lambuibg@gmail.com.
+
+**English.** "Sổ sản phẩm" is an internal tool for staff explicitly added by the project owner. When you choose "Sign in with Google", Google only shares your **email address** with Cloudflare Access, which checks it against an allow-list. We do not read your mail, contacts, files or any other Google data, and we never sell or share your email. It is kept only in the allow-list and Cloudflare Access sign-in logs. To be removed, contact lambuibg@gmail.com.
