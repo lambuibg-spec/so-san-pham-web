@@ -5,11 +5,11 @@ ra = sys.argv[1]
 nguon = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'quan_tri')
 dich = os.path.join(ra, 'quan-tri')
 os.makedirs(dich, exist_ok=True)
-for f in ('index.html', 'nut.js', 'moi.js'):
+for f in ('index.html', 'nut.js', 'moi.js', 'nhat_ky.js'):
     shutil.copy2(os.path.join(nguon, f), os.path.join(dich, f))
 p = os.path.join(ra, 'index.html')
 s = open(p, encoding='utf-8').read()
-tag = '<script src="/quan-tri/nut.js" defer></script><script src="/quan-tri/moi.js" defer></script>'   # moi.js: the moi tuc thi qua Firebase /tim/moi
+tag = '<script src="/quan-tri/nut.js" defer></script><script src="/quan-tri/moi.js" defer></script><script src="/quan-tri/nhat_ky.js" defer></script>'   # moi.js: the moi tuc thi qua Firebase /tim/moi
 if tag not in s:
     i = s.rfind('</body>')
     s = (s[:i] + tag + s[i:]) if i >= 0 else s + tag

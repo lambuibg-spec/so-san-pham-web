@@ -21,6 +21,10 @@ li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding
 <textarea id="them" placeholder="nhanvien1@gmail.com&#10;nhanvien2@gmail.com"></textarea>
 <div style="margin-top:10px"><button id="bt">Thêm vào danh sách</button></div><div id="tb"></div></div>
 <div class="card"><b>Đang được xem sổ <span id="dem" class="mut"></span></b><ul id="ds"><li class="mut">Đang tải…</li></ul></div>
+<div class="card"><b>Nhật ký tích / tim</b> <span id="nkdem" class="mut"></span>
+<p class="mut" style="margin:4px 0 8px">Ai tích "đã quay" hoặc tim sản phẩm nào, lúc nào (từ 14/11/2026 trở đi; chỉ ghi khi nhân viên mở sổ bằng bản mới). Mã kênh như c501 là mã kênh quay trong sổ.</p>
+<div id="nktong" class="mut"></div>
+<div style="overflow-x:auto"><table id="nkb" style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px"></table></div></div>
 <p class="mut"><a href="/">← Về sổ sản phẩm</a></p>
 <script>
 var $=function(i){return document.getElementById(i)},ADM=[];
@@ -32,10 +36,37 @@ function ve(j){ADM=j.admin_list||ADM;var ul=$('ds');ul.innerHTML='';$('dem').tex
   ul.appendChild(li)})}
 function tai(){fetch('/quan-tri/api',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
  if(!j.admin){document.querySelector('main').innerHTML='<h1>Không có quyền</h1><p class="mut">Chỉ quản trị viên mới mở được trang này.</p><p><a href="/">← Về sổ</a></p>';return}
- if(j.loi){$('ds').innerHTML='';tb(j.loi,1);return}ve(j)}).catch(function(e){tb('Lỗi tải: '+e,1)})}
+ if(j.loi){$('ds').innerHTML='';tb(j.loi,1);return}ve(j);nhatKy(j.emails)}).catch(function(e){tb('Lỗi tải: '+e,1)})}
 function gui(b){$('bt').disabled=true;tb('Đang lưu…');
  fetch('/quan-tri/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(j){
   $('bt').disabled=false;if(j.loi){tb(j.loi,1);return}tb('Đã lưu. Có hiệu lực ngay.');$('them').value='';ve({emails:j.emails})}).catch(function(e){$('bt').disabled=false;tb('Lỗi: '+e,1)})}
 $('bt').onclick=function(){var l=$('them').value.split(/[\s,;]+/).filter(Boolean);if(!l.length){tb('Chưa nhập email',1);return}gui({them:l})};
+
+var FB='https://project-c3d8a9ea-5303-4e42-969-default-rtdb.asia-southeast1.firebasedatabase.app';
+function sha10(s){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(s).toLowerCase().trim())).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return('0'+x.toString(16)).slice(-2)}).join('').slice(0,10)})}
+function gio(t){var d=new Date(t);return d.toLocaleString('vi-VN',{hour12:false,day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+function nhatKy(emails){
+ $('nkdem').textContent='(đang tải…)';
+ fetch(FB+'/daquay.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(dq){
+  var ks={};Object.keys(dq||{}).forEach(function(k){var p=k.split('|');if(p.length===3)ks[p[2].toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,8)]=1});
+  var loai=['h'].concat(Object.keys(ks).map(function(k){return't'+k}));
+  var viec=[];emails.forEach(function(e){viec.push(sha10(e).then(function(h){return loai.map(function(l){return{e:e,l:l,u:FB+'/tim/a'+h+'_'+l+'.json'}})}))});
+  return Promise.all(viec).then(function(a){return[].concat.apply([],a)});
+ }).then(function(ds){
+  var rows=[],i=0;
+  function lo(){var nho=ds.slice(i,i+16);i+=16;if(!nho.length)return Promise.resolve();
+   return Promise.all(nho.map(function(x){return fetch(x.u,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){Object.keys(d||{}).forEach(function(ma){var o=d[ma];if(o&&o.t)rows.push({e:x.e,l:x.l,ma:ma,v:o.v,t:+o.t})})}).catch(function(){})})).then(lo)}
+  return lo().then(function(){return rows});
+ }).then(function(rows){
+  rows.sort(function(a,b){return b.t-a.t});
+  var tong={};rows.forEach(function(r){var o=tong[r.e]||(tong[r.e]={n:0,t:0});o.n++;if(r.t>o.t)o.t=r.t});
+  $('nkdem').textContent='('+rows.length+' thao tác)';
+  $('nktong').textContent=Object.keys(tong).map(function(e){return e+': '+tong[e].n+' thao tác, gần nhất '+gio(tong[e].t)}).join('  ·  ')||'Chưa có thao tác nào được ghi.';
+  var t=$('nkb');t.innerHTML='';
+  rows.slice(0,300).forEach(function(r){var tr=document.createElement('tr');tr.style.borderTop='1px solid var(--line)';
+   var act=r.l==='h'?(r.v?'Tim':'Bỏ tim'):((r.v?'Tích đã quay':'Bỏ tích')+' · '+r.l.slice(1));
+   [gio(r.t),r.e,act,r.ma].forEach(function(x){var td=document.createElement('td');td.style.padding='6px 8px 6px 0';td.textContent=x;tr.appendChild(td)});t.appendChild(tr)});
+ }).catch(function(e){$('nkdem').textContent='(lỗi tải: '+e+')'});
+}
 tai();
 </script></main></body></html>
