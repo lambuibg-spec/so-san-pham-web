@@ -47,15 +47,13 @@ function sha10(s){return crypto.subtle.digest('SHA-256',new TextEncoder().encode
 function gio(t){var d=new Date(t);return d.toLocaleString('vi-VN',{hour12:false,day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function nhatKy(emails){
  $('nkdem').textContent='(đang tải…)';
- fetch(FB+'/daquay.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(dq){
-  var ks={};Object.keys(dq||{}).forEach(function(k){var p=k.split('|');if(p.length===3)ks[p[2].toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,8)]=1});
-  var loai=['h'].concat(Object.keys(ks).map(function(k){return't'+k}));
+ Promise.resolve(['h','t0','t1','t2','t3']).then(function(loai){
   var viec=[];emails.forEach(function(e){viec.push(sha10(e).then(function(h){return loai.map(function(l){return{e:e,l:l,u:FB+'/tim/a'+h+'_'+l+'.json'}})}))});
   return Promise.all(viec).then(function(a){return[].concat.apply([],a)});
  }).then(function(ds){
   var rows=[],i=0;
   function lo(){var nho=ds.slice(i,i+16);i+=16;if(!nho.length)return Promise.resolve();
-   return Promise.all(nho.map(function(x){return fetch(x.u,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){Object.keys(d||{}).forEach(function(ma){var o=d[ma];if(o&&o.t)rows.push({e:x.e,l:x.l,ma:ma,v:o.v,t:+o.t})})}).catch(function(){})})).then(lo)}
+   return Promise.all(nho.map(function(x){return fetch(x.u,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){Object.keys(d||{}).forEach(function(ma){var o=d[ma];if(o&&o.t)rows.push(x.l==='h'?{e:x.e,l:'h',ma:ma,v:o.v,t:+o.t}:{e:x.e,l:'c'+(+o.t%10000),ma:ma,v:o.v,t:Math.floor(+o.t/10000)*1000})})}).catch(function(){})})).then(lo)}
   return lo().then(function(){return rows});
  }).then(function(rows){
   rows.sort(function(a,b){return b.t-a.t});
@@ -64,7 +62,7 @@ function nhatKy(emails){
   $('nktong').textContent=Object.keys(tong).map(function(e){return e+': '+tong[e].n+' thao tác, gần nhất '+gio(tong[e].t)}).join('  ·  ')||'Chưa có thao tác nào được ghi.';
   var t=$('nkb');t.innerHTML='';
   rows.slice(0,300).forEach(function(r){var tr=document.createElement('tr');tr.style.borderTop='1px solid var(--line)';
-   var act=r.l==='h'?(r.v?'Tim':'Bỏ tim'):((r.v?'Tích đã quay':'Bỏ tích')+' · '+r.l.slice(1));
+   var act=r.l==='h'?(r.v?'Tim':'Bỏ tim'):((r.v?'Tích đã quay':'Bỏ tích')+' · kênh '+r.l.slice(1));
    [gio(r.t),r.e,act,r.ma].forEach(function(x){var td=document.createElement('td');td.style.padding='6px 8px 6px 0';td.textContent=x;tr.appendChild(td)});t.appendChild(tr)});
  }).catch(function(e){$('nkdem').textContent='(lỗi tải: '+e+')'});
 }

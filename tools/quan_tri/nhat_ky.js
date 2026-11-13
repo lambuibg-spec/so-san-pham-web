@@ -2,7 +2,7 @@
    Trang so ghi tich "da quay" (Firebase /daquay) va tim (Firebase /tim/<ds>) khong kem nguoi. Script nay LANG NGHE cac lenh ghi do (boc window.fetch,
    KHONG doi lenh goc) roi ghi them 1 ban nhat ky mang ten nguoi dang nhap, vao cac muc /tim/a<ma-bam-email>_<loai> ma luat Firebase hien co da cho ghi
    (khoa = ma 19 so, v = 0/1, t = gio). Email KHONG ghi ro: chi 10 ky tu dau cua SHA-256(email thuong). Trang /quan-tri/ (chi admin) doc lai va hien bang.
-   Loai: t<kenh> = tich da quay cua kenh do (vd t501) · h = tim. Chi ghi thao tac vua xay ra (<= 2 phut) de khong gan nham tich cu duoc day lai. */
+   Loai: t0..t3 = tich da quay (kenh chia 4 nhom; so kenh nam trong t = giay*10000 + kenh) · h = tim (t = mili-giay). Chi ghi thao tac vua xay ra (<= 2 phut) de khong gan nham tich cu duoc day lai. */
 (function () {
   var FB = 'https://project-c3d8a9ea-5303-4e42-969-default-rtdb.asia-southeast1.firebasedatabase.app';
   var goc = window.fetch.bind(window);
@@ -25,7 +25,8 @@
   function tich(k, o) {
     var p = String(k).split('|');
     if (p.length !== 3 || !/^\d{19}$/.test(p[0]) || !o || typeof o !== 'object' || !moi(+o.t)) return;
-    ghi('t' + p[2].toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8), p[0], o.x, +o.t);
+    var kn = parseInt(p[2].replace(/\D/g, ''), 10) || 0;                  // so kenh (c501 -> 501)
+    ghi('t' + (kn % 4), p[0], o.x, Math.floor(+o.t / 1000) * 10000 + (kn % 10000));   // 4 muc cho gon: t = giay*10000 + so kenh
   }
   function tim(ma, o) {
     if (!/^\d{19}$/.test(ma) || !o || typeof o !== 'object' || !moi(+o.t)) return;
