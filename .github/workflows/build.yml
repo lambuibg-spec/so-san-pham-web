@@ -80,7 +80,9 @@ jobs:
         run: python tools/build_web.py
       - name: tach anh + khoi the quay ra file (Cloudflare chi nhan file <= 25 MiB)
         run: python tools/tach_file.py site site_cf
-      - name: them trang quan ly nhan vien (/quan-tri/) + nut admin
+      - name: them trang quan ly nhan vien (/quan-tri/) + nut admin + tim theo anh (/tim-anh/)
+        env:
+          TIKTOK_LUAT: ${{ github.workspace }}/law
         run: python tools/them_quan_tri.py site_cf
       - name: trang doi so voi ban dang chay?
         id: so
@@ -88,7 +90,7 @@ jobs:
           EP: ${{ github.event.inputs.ep }}
           DA_DANG: ${{ steps.cf.outputs.da_dang }}
         run: |
-          sha=$(cat _work/BUILD_SHA)$(cat functions/quan-tri/api.js tools/quan_tri/* tools/them_quan_tri.py | sha256sum | cut -c1-6)
+          sha=$(cat _work/BUILD_SHA)$(cat functions/quan-tri/api.js tools/quan_tri/* tools/them_quan_tri.py tools/tim_anh/tim_anh.js law/so-san-pham/tim_anh/ma.json law/so-san-pham/tim_anh/emb.bin 2>/dev/null | sha256sum | cut -c1-6)
           echo "ban moi: build:$sha | ban dang chay: ${DA_DANG:-khong co}"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           if [ "$DA_DANG" = "build:$sha" ] && [ "$EP" != "1" ]; then echo "doi=0" >> "$GITHUB_OUTPUT"; echo "Trang KHONG doi - bo qua dang"; else echo "doi=1" >> "$GITHUB_OUTPUT"; fi
