@@ -49,8 +49,8 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hien); else hien();
   } catch (e) { MAY = ''; }
   function ghiMay(nhom, ma, v, t) {
-    if (!MAY) return;
-    goc(FB + '/tim/m' + MAY + '_t' + nhom + '/' + ma + '.json', { method: 'PUT', body: JSON.stringify({ v: v ? 1 : 0, t: t }) }).catch(function () {});
+    if (!MAY || !v) return;                                               // 25/11 sua: bo tich (v=0) KHONG ghi de dau may da tich
+    goc(FB + '/tim/m' + MAY + '_t' + nhom + '/' + ma + '.json', { method: 'PUT', keepalive: true, body: JSON.stringify({ v: v ? 1 : 0, t: t }) }).catch(function () {});   // keepalive: iPhone chuyen sang app van gui xong
   }
   function tich(k, o) {
     var p = String(k).split('|');
@@ -59,6 +59,20 @@
     ghi('t' + (kn % 4), p[0], o.x, Math.floor(+o.t / 1000) * 10000 + (kn % 10000));   // 4 muc cho gon: t = giay*10000 + so kenh
     ghiMay(kn % 4, p[0], o.x, Math.floor(+o.t / 1000) * 10000 + (kn % 10000));          // 25/11: may nao tich
   }
+  // 25/11 sua: QUAY BANG APP "Mai Thi Quay" - app tu ghi tich thang len Firebase, trang so khong thay lenh ghi => truoc day KHONG biet may nao.
+  // So mo app bang 1 the <a href="maithiquay://quay?...&tick=<khoa>&ma=<ma 19 so>"> roi click => bat cu click do, ghi: may NAY dang quay ma do.
+  document.addEventListener('click', function (e) {
+    try {
+      var a = e.target && e.target.closest && e.target.closest('a[href^="maithiquay:"]');
+      if (!a || !MAY) return;
+      var q = String(a.getAttribute('href')).split('?')[1] || '', o = {};
+      q.split('&').forEach(function (x) { var i = x.indexOf('='); if (i > 0) o[x.slice(0, i)] = decodeURIComponent(x.slice(i + 1)); });
+      var p = String(o.tick || '').split('|'), ma = /^\d{19}$/.test(o.ma || '') ? o.ma : p[0];
+      if (!/^\d{19}$/.test(ma)) return;
+      var kn = parseInt(String(p[2] || '').replace(/\D/g, ''), 10) || 0;
+      ghiMay(kn % 4, ma, 1, Math.floor(Date.now() / 1000) * 10000 + (kn % 10000));
+    } catch (er) {}
+  }, true);
   function tim(ma, o) {
     if (!/^\d{19}$/.test(ma) || !o || typeof o !== 'object' || !moi(+o.t)) return;
     ghi('h', ma, o.v, +o.t);
