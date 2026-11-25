@@ -22,11 +22,42 @@
     }).catch(function () {});
   }
   function moi(t) { return t && Math.abs(Date.now() - t) <= 120000; }
+  /* MA MAY (25/11/2026, chu du an: "so sanh voi phieu quay da tich chua tich tung kenh, kenh nao tich roi chua co video? o may dien thoai nao?" -> "Co, sua so").
+     Moi dien thoai tu co 1 MA MAY 19 so (ngau nhien, luu trong may, khong lay thong tin ca nhan); goc trang hien "📱 Máy <4 so cuoi>" de biet may nao.
+     Moi lan tich "da quay" ghi them /tim/m<ma may>_t<nhom>/<ma 19 so> = {v, t} (cung kieu nhat ky nguoi, luat Firebase hien co da cho ghi)
+     + danh sach may /tim/may_ds/<ma may> = {v:1, t:lan mo trang}. Tool cat ghep doc lai: ma san pham tich ma chua co clip nam o may nao. */
+  var MAY = '';
+  try {
+    MAY = localStorage.getItem('soSP_ma_may') || '';
+    if (!/^9\d{18}$/.test(MAY)) {
+      var r = new Uint32Array(3); crypto.getRandomValues(r);
+      MAY = ('9' + String(r[0]).padStart(10, '0') + String(r[1]).padStart(10, '0')).slice(0, 19);
+      localStorage.setItem('soSP_ma_may', MAY);
+    }
+    var hom = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('soSP_ma_may_bao') !== hom) {
+      goc(FB + '/tim/may_ds/' + MAY + '.json', { method: 'PUT', body: JSON.stringify({ v: 1, t: Date.now() }) })
+        .then(function (q) { if (q.ok) localStorage.setItem('soSP_ma_may_bao', hom); }).catch(function () {});
+    }
+    var hien = function () {
+      if (!document.body || document.getElementById('soMaMay')) return;
+      var e = document.createElement('div'); e.id = 'soMaMay'; e.textContent = '📱 Máy ' + MAY.slice(-4);
+      e.title = 'Mã máy này: ' + MAY + ' — dùng để biết clip tích ở điện thoại nào';
+      e.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99990;font:600 11px/1.2 system-ui,sans-serif;color:#555;background:rgba(255,255,255,.85);border:1px solid #ddd;border-radius:8px;padding:2px 6px;pointer-events:none';
+      document.body.appendChild(e);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hien); else hien();
+  } catch (e) { MAY = ''; }
+  function ghiMay(nhom, ma, v, t) {
+    if (!MAY) return;
+    goc(FB + '/tim/m' + MAY + '_t' + nhom + '/' + ma + '.json', { method: 'PUT', body: JSON.stringify({ v: v ? 1 : 0, t: t }) }).catch(function () {});
+  }
   function tich(k, o) {
     var p = String(k).split('|');
     if (p.length !== 3 || !/^\d{19}$/.test(p[0]) || !o || typeof o !== 'object' || !moi(+o.t)) return;
     var kn = parseInt(p[2].replace(/\D/g, ''), 10) || 0;                  // so kenh (c501 -> 501)
     ghi('t' + (kn % 4), p[0], o.x, Math.floor(+o.t / 1000) * 10000 + (kn % 10000));   // 4 muc cho gon: t = giay*10000 + so kenh
+    ghiMay(kn % 4, p[0], o.x, Math.floor(+o.t / 1000) * 10000 + (kn % 10000));          // 25/11: may nao tich
   }
   function tim(ma, o) {
     if (!/^\d{19}$/.test(ma) || !o || typeof o !== 'object' || !moi(+o.t)) return;
