@@ -48,6 +48,34 @@
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hien); else hien();
   } catch (e) { MAY = ''; }
+  /* DAU NGUON TUNG CANH (27/11/2026, chu du an: «hien thi gio quay cua tung phieu, may nao quay» + «phat hien phieu nao tich tay ma chua quay video tren app, bao do»).
+     Ban ghi /tim/m<may>_t<nhom>/<ma> o tren bi GHI DE (moi may chi giu 4 o / san pham) => khong du de biet tung canh. Ghi them 1 khoa KHONG ghi de vao chinh so tich:
+       daquay/<ma19>|<kenh*1000+phieu>|c<L*100000000 + 4 so cuoi ma may*10000 + luot*100+canh> = {x:0, t}
+       L = 7 TICH TAY tren trang so (t = gio tich) · 8 MO APP Mai Thi Quay de quay canh do (t = luc bam) · 9 video QUA SO (camera trong so / LAY VIDEO / app gui &da=).
+     x = 0 de MOI tool cu (chi dem x = 1) bo qua; dung khuon khoa + {x,t} luat Firebase hien co. lich_quay_kenh.py doc lai: canh nao TICH TAY ma khong co video app => bao DO. */
+  var M4 = MAY ? MAY.slice(-4) : '';
+  window.SO_MAY = { id: MAY, m4: M4, FB: FB };
+  function dauKhoa(L, k, t) {
+    var p = String(k).split('|'), c = parseInt(String(p[2] || '').replace(/^c/, ''), 10);
+    if (!M4 || p.length !== 3 || !/^\d{19}$/.test(p[0]) || !/^\d+$/.test(p[1]) || !(c >= 0 && c < 10000)) return null;
+    return [p[0] + '|' + p[1] + '|c' + (L * 100000000 + (+M4) * 10000 + c), { x: 0, t: +t }];
+  }
+  function ghiDau(ds) {
+    ds = ds.filter(Boolean); if (!ds.length) return;
+    var o = {}; ds.forEach(function (z) { o[z[0]] = z[1]; });
+    goc(FB + '/daquay.json', { method: 'PATCH', keepalive: true, body: JSON.stringify(o) }).catch(function () {});   // goc: khong qua bo boc nay => khong tu ghi nhat ky lai
+  }
+  function dauLo(d) {                                                        // 1 lenh ghi tich cua trang so (nhieu khoa) -> dau tung canh vua tich
+    var ds = [];
+    Object.keys(d || {}).forEach(function (k) {
+      var o = d[k], p = String(k).split('|'); if (p.length !== 3 || !o || +o.x !== 1 || !moi(+o.t)) return;
+      var c = parseInt(String(p[2]).replace(/^c/, ''), 10); if (!/^c\d+$/.test(p[2]) || !(c >= 0 && c < 10000)) return;
+      var ban = function (off) { var z = d[p[0] + '|' + p[1] + '|c' + (off + c)]; return z && +z.x === 1; };
+      if (ban(100000)) return;                                                // «mau khong tu quay duoc» — co rieng, khong phai tich tay
+      ds.push(dauKhoa(ban(600000) ? 9 : 7, k, o.t));
+    });
+    ghiDau(ds);
+  }
   function ghiMay(nhom, ma, v, t) {
     if (!MAY || !v) return;                                               // 25/11 sua: bo tich (v=0) KHONG ghi de dau may da tich
     goc(FB + '/tim/m' + MAY + '_t' + nhom + '/' + ma + '.json', { method: 'PUT', keepalive: true, body: JSON.stringify({ v: v ? 1 : 0, t: t }) }).catch(function () {});   // keepalive: iPhone chuyen sang app van gui xong
@@ -71,6 +99,7 @@
       if (!/^\d{19}$/.test(ma)) return;
       var kn = parseInt(String(p[2] || '').replace(/\D/g, ''), 10) || 0;
       ghiMay(kn % 4, ma, 1, Math.floor(Date.now() / 1000) * 10000 + (kn % 10000));
+      if (p.length === 3) ghiDau([dauKhoa(8, o.tick, Date.now())]);       // 27/11: dau «may nay mo app quay canh nay» (khong bi ghi de)
     } catch (er) {}
   }, true);
   function tim(ma, o) {
@@ -81,8 +110,8 @@
     if (url.indexOf(FB) !== 0 || (method !== 'PUT' && method !== 'PATCH')) return;
     var path = url.slice(FB.length).split('?')[0], d, m, k;
     try { d = JSON.parse(body); } catch (e) { return; }
-    if (path === '/daquay.json' && method === 'PATCH') { for (k in d) tich(k, d[k]); }
-    else if ((m = /^\/daquay\/([^/]+)\.json$/.exec(path)) && method === 'PUT') { tich(decodeURIComponent(m[1]), d); }
+    if (path === '/daquay.json' && method === 'PATCH') { for (k in d) tich(k, d[k]); dauLo(d); }
+    else if ((m = /^\/daquay\/([^/]+)\.json$/.exec(path)) && method === 'PUT') { k = decodeURIComponent(m[1]); tich(k, d); var o1 = {}; o1[k] = d; dauLo(o1); }
     else if ((m = /^\/tim\/([^/]+)\.json$/.exec(path)) && method === 'PATCH') { if (!/^a[0-9a-f]{10}_/.test(decodeURIComponent(m[1]))) for (k in d) tim(k, d[k]); }
     else if ((m = /^\/tim\/([^/]+)\/(\d{19})\.json$/.exec(path)) && method === 'PUT') { if (!/^a[0-9a-f]{10}_/.test(decodeURIComponent(m[1]))) tim(m[2], d); }
   }
